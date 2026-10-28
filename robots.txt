@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://einfollab.github.io/sitemap.xml
