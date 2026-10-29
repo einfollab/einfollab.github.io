@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[강화학습 기초 2-1] 강화학습이란, 그리고 꼭 알아야 할 확률 | 아인폴랩</title>
+<meta name="description" content="강화학습의 구성 요소와, 강화학습을 이해하는 데 필요한 확률 · 조건부 확률 · 확률과정을 정리합니다.">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="../assets/css/site.css">
+</head>
+<body>
+<a class="ef-skip" href="#main">본문으로 건너뛰기</a>
+<header class="ef-header">
+  <div class="ef-container ef-header__inner">
+    <a class="ef-wordmark" href="../index.html" aria-label="아인폴랩 홈">아인폴랩<span class="ef-wordmark__dot" aria-hidden="true"></span></a>
+    <nav class="ef-nav" aria-label="주 메뉴">
+      <a href="../index.html#about">회사 소개</a>
+      <a href="../index.html#services">사업 분야</a>
+      <a href="../courses.html">교육 과정</a>
+      <a href="../records.html">고객 사례</a>
+      <a href="../lab.html">AI연구소</a>
+      <a href="../blog/index.html" aria-current="page">블로그</a>
+    </nav>
+    <a class="ef-btn ef-btn--primary ef-btn--sm ef-header__cta" href="../index.html#contact">교육 문의</a>
+    <button class="ef-menu-btn" type="button" aria-expanded="false" aria-controls="mobile-nav">메뉴</button>
+  </div>
+  <nav class="ef-mobile-nav" id="mobile-nav" aria-label="모바일 메뉴">
+    <a href="../index.html#about">회사 소개</a>
+    <a href="../index.html#services">사업 분야</a>
+    <a href="../courses.html">교육 과정</a>
+    <a href="../records.html">고객 사례</a>
+    <a href="../lab.html">AI연구소</a>
+    <a href="../blog/index.html" aria-current="page">블로그</a>
+    <a class="ef-btn ef-btn--primary" href="../index.html#contact">교육 문의하기</a>
+  </nav>
+</header>
+
+<main id="main">
+<div class="ef-container">
+  <article class="ef-article">
+    <a class="ef-article__back" href="../blog/index.html">← 블로그 목록</a>
+    <header class="ef-article__head">
+      <div class="ef-tags"><span class="ef-tag" data-track="dev">강화학습</span><span class="ef-tag">연재</span>
+        <span class="ef-tag">2026.09.30</span>
+      </div>
+      <h1>[강화학습 기초 2-1] 강화학습이란, 그리고 꼭 알아야 할 확률</h1><p class="ef-lead">강화학습의 구성 요소와, 강화학습을 이해하는 데 필요한 확률 · 조건부 확률 · 확률과정을 정리합니다.</p>
+    </header>
+    <div class="ef-prose">
+<div class="ef-series">
+  <p class="ef-series__name">강화학습 기초 시리즈 · 12편 중 2번째 글</p>
+  <details><summary>연재 목차 보기</summary><ol><li><a href="rl-01.html">1. 왜 지금 강화학습인가</a></li><li aria-current="page">2-1. 강화학습이란, 그리고 꼭 알아야 할 확률</li><li><a href="rl-02-2.html">2-2. 마르코프 연쇄: 지금만 보고 다음을 예측한다</a></li><li><a href="rl-02-3.html">2-3. 마르코프 보상 과정: 상태의 가치를 계산한다</a></li><li><a href="rl-03-1.html">3-1. 마르코프 결정 과정: 행동과 정책이 더해진다</a></li><li><a href="rl-03-2.html">3-2. 다이내믹 프로그래밍, 몬테카를로, TD</a></li><li><a href="rl-03-3.html">3-3. 살사와 Q러닝</a></li><li><a href="rl-04-1.html">4-1. 선형 회귀에서 심층 신경망까지</a></li><li><a href="rl-04-2.html">4-2. 텐서플로로 첫 신경망 만들기</a></li><li><a href="rl-05.html">5. 함수 근사: 표 대신 신경망으로 가치를 표현한다</a></li><li><a href="rl-06-1.html">6-1. DQN을 움직이는 세 가지 장치</a></li><li><a href="rl-06-2.html">6-2. 카트폴 DQN 코드 한 줄씩 읽기</a></li></ol></details>
+  <p class="ef-series__src">대표가 쓴 『개발자답게 코드로 익히는 강화학습』(프리렉, 2025)의 내용을 블로그에 맞게 정리해 연재합니다.</p>
+</div>
+
+<h2>강화학습이란</h2>
+<p>강화학습은 <b>보상을 잘 설계해서, 에이전트가 좋은 행동을 하도록 이끄는 정책을 찾는 방법</b>입니다. 본격적으로 알고리즘을 다루기 전에, 이 장에서는 강화학습을 이해하는 데 필요한 배경지식을 차근차근 정리합니다. 강화학습은 인공지능 분야에서도 어려운 편에 속해서, 기초를 먼저 다져 두는 것이 결국 빠른 길입니다.</p>
+<p>강화학습에서 <b>에이전트(Agent)</b>는 <b>정책(Policy)</b>에 따라 어떤 <b>환경(Environment)</b>에서 <b>행동(Action)</b>을 합니다. 행동에 따라 환경의 <b>상태(State)</b>가 바뀌고, 상태가 좋아졌는지 나빠졌는지에 따라 <b>보상(Reward)</b>을 받습니다.</p>
+<figure><img src="../assets/img/blog/rl/ch2-components.png" alt="강화학습의 구성 요소" loading="lazy"><figcaption>강화학습의 구성 요소</figcaption></figure>
+<p>정책이 좋으면 환경은 계속 좋은 쪽으로 바뀌고, 받는 보상도 커집니다. 강화학습의 목적은 행동의 결과로 받는 보상을 모두 더한 값, 즉 <b>누적 보상이 가장 커지는 정책</b>을 찾는 것입니다.</p>
+<figure><img src="../assets/img/blog/rl/ch2-flowerbed.png" alt="강화학습의 기본 개념 (이미지: pixabay.com)" loading="lazy"><figcaption>강화학습의 기본 개념 (이미지: pixabay.com)</figcaption></figure>
+<p>발밑은 보지 못하고 앞만 볼 수 있는 아이가 꽃이 심어진 화단을 건너간다고 생각해 봅시다. 아이가 한 발 내디딜 때마다 꽃을 밟으면 꾸중을 하고, 밟지 않으면 칭찬을 합니다. 이런 시도를 수없이 반복하면, 아이는 결국 꽃을 하나도 밟지 않고 화단을 건널 수 있게 됩니다. 칭찬받았던 경험이 쌓여서 어디로 가야 꽃을 밟지 않는지 알게 되기 때문입니다.</p>
+<p>이 예에 강화학습의 용어를 붙여 보면 다음과 같습니다.</p>
+<table>
+<thead><tr><th>강화학습 용어</th><th>화단 예시</th></tr></thead>
+<tbody>
+<tr><td>환경</td><td>화단</td></tr>
+<tr><td>상태</td><td>화단에 있는 꽃들의 모습</td></tr>
+<tr><td>에이전트</td><td>아이</td></tr>
+<tr><td>행동</td><td>발을 내딛는 것</td></tr>
+<tr><td>보상</td><td>칭찬과 꾸중</td></tr>
+</tbody>
+</table>
+<p>사실 우리는 자라면서 모르는 사이에 강화학습으로 많은 것을 배웁니다. 걸음마, 말, 자전거 타기를 배울 때 실패와 성공, 칭찬과 꾸중, 아픔과 성취감이라는 보상을 거치며 자연스럽게 몸에 익힙니다.</p>
+<p>행동과 상태의 종류가 적으면 직접 계산해서 가장 좋은 정책을 찾을 수 있습니다. 하지만 종류가 많아지면 계산만으로는 찾기 어렵습니다. 이럴 때 쓰는 것이 <b>인공신경망</b>입니다.</p>
+<p>지금은 조금 추상적으로 느껴질 수 있습니다. 앞으로 필요한 개념을 하나씩 살펴보면 어렵지 않게 내 것으로 만들 수 있습니다.</p>
+
+<h2>확률</h2>
+<p>강화학습을 이해하려면 먼저 <b>확률</b>을 알아야 합니다. 확률은 어떤 일이 일어날 가능성을 나타내는 방법이고, 같은 원인에서 특정한 결과가 나타나는 비율을 뜻하기도 합니다.</p>
+<p>확률 하면 주사위가 먼저 떠오릅니다. 주사위를 던져 1이 나올 확률은 1/6입니다. 그렇다면 주사위를 6번 던지면 1이 반드시 한 번 나올까요? 그렇지 않습니다. 확률이 1/6이라는 말은 <b>아주 많이 던져서 평균을 내면 6번에 한 번꼴로 1이 나온다</b>는 뜻입니다.</p>
+<p>이처럼 확률은 <b>무작위(Random)</b>라는 개념과 섞여 있습니다. 어떤 현상이 확률적(Stochastic)이라고 하면 무작위적이라고 생각해도 좋습니다. 그래도 주사위처럼 나올 수 있는 경우의 수를 알면 확률을 계산할 수 있습니다.</p>
+
+<h2>조건부 확률</h2>
+<p><b>조건부 확률</b>은 어떤 조건 아래에서 일이 일어날 확률입니다. A가 일어났을 때 B가 일어날 확률을 <b>P(B|A)</b>라고 쓰고, A에 대한 B의 조건부 확률이라고 부릅니다.</p>
+<figure><img src="../assets/img/blog/rl/ch2-conditional.png" alt="조건부 확률 (이미지: pixabay.com)" loading="lazy"><figcaption>조건부 확률 (이미지: pixabay.com)</figcaption></figure>
+<p>남학생 5명, 여학생 5명인 반이 있고, 남학생 중 2명, 여학생 중 3명이 노트북을 가지고 있다고 해 봅시다.</p>
+<ul>
+<li>반 전체에서 한 명을 골랐을 때 노트북이 있을 확률: 5/10 = <b>1/2</b></li>
+<li>남학생 중에서 골랐을 때 노트북이 있을 확률: <b>2/5</b> → P(노트북 | 남학생)</li>
+<li>여학생 중에서 골랐을 때 노트북이 있을 확률: <b>3/5</b> → P(노트북 | 여학생)</li>
+</ul>
+<p>"남학생이라는 조건 아래에서" 확률을 따지는 것, 이것이 조건부 확률입니다.</p>
+
+<h2>확률과정</h2>
+<p><b>확률과정(Stochastic Process)</b>은 확률(Stochastic)과 과정(Process)을 합친 말입니다. 확률은 짧게 보면 무작위지만 길게 보면 일정한 규칙이 있습니다. 과정은 성장 과정, 진화 과정처럼 시간과 연결되어 있습니다. 그래서 확률과정은 <b>시간의 흐름에 따라 확률적으로 움직이는 상태</b>를 말합니다.</p>
+<figure><img src="../assets/img/blog/rl/ch2-stochastic.png" alt="확률과정의 표기" loading="lazy"><figcaption>확률과정의 표기</figcaption></figure>
+<p>확률과정은 보통 {X<sub>t</sub>}처럼 씁니다. X는 랜덤변수, t는 시간, { }는 집합입니다. 즉 시간에 따라 나타나는 랜덤변수의 모음으로 확률과정을 표현합니다.</p>
+<p>이런 개념을 만든 이유는 문제를 풀기 위해서입니다. 현상을 수학으로 표현할 수 있으면 프로그래밍으로 문제를 풀기 쉬워집니다. 확률과정은 <b>시간에 따라 무작위로 바뀌는 상태나 환경을 수학으로 표현한 것</b>이라고 정리할 수 있습니다.</p>
+<figure><img src="../assets/img/blog/rl/ch2-brownian.png" alt="브라운 운동 (출처: Wikipedia, Brownian motion)" loading="lazy"><figcaption>브라운 운동 (출처: Wikipedia, Brownian motion)</figcaption></figure>
+<p>확률과정이 쓰인 대표적인 예가 <b>브라운 운동(Brownian motion)</b>입니다. 1827년 스코틀랜드 식물학자 로버트 브라운이 물 위의 꽃가루 입자가 불규칙하게 움직이는 현상을 관찰했습니다. 처음에는 살아 있는 것이 스스로 움직인다고 생각했지만, 돌가루나 유리 같은 무기물에서도 같은 움직임이 나타났습니다.</p>
+<p>한 지점에서 출발한 입자가 일정한 시간 간격으로 제멋대로 움직일 때, 충분히 여러 번 움직인 뒤 입자가 어디에 있을지 확률로 구할 수 있습니다. 이후 아인슈타인이 이 움직임의 원인이 물 분자의 충돌이라는 것을 밝히고 수식으로 정리했습니다. 브라운 운동은 지금도 통계역학과 경제학, 특히 시장의 움직임을 설명하는 데 많이 쓰입니다.</p>
+
+<h2>정리</h2>
+<ul>
+<li>강화학습은 누적 보상이 가장 커지는 정책을 찾는 방법입니다.</li>
+<li>에이전트, 정책, 환경, 행동, 상태, 보상이 기본 구성 요소입니다.</li>
+<li>조건부 확률은 "어떤 조건 아래에서"의 확률이고, 확률과정은 시간에 따라 확률적으로 바뀌는 상태입니다.</li>
+</ul>
+<p>다음 편에서는 이 확률과정의 특별한 형태인 <b>마르코프 연쇄</b>를 살펴봅니다.</p>
+
+<nav class="ef-series-nav" aria-label="연재 이동"><a href="rl-01.html">← 1. 왜 지금 강화학습인가</a><a class="is-next" href="rl-02-2.html">2-2. 마르코프 연쇄: 지금만 보고 다음을 예측한다 →</a></nav>
+    </div>
+    <div class="ef-article__foot">
+      <div class="ef-cta ef-inverse">
+        <h2 class="ef-h2">교육과 컨설팅을 문의해 주세요</h2>
+        <p>교육 대상과 일정을 알려 주시면 과정 제안과 강의계획서를 보내 드립니다.</p>
+        <div class="ef-cta__actions">
+          <a class="ef-btn ef-btn--primary ef-btn--lg" href="mailto:iaman1016@gmail.com?subject=%EA%B5%90%EC%9C%A1%20%EB%AC%B8%EC%9D%98">교육 문의하기</a>
+          <a class="ef-btn ef-btn--secondary ef-btn--lg" href="../blog/index.html">다른 글 보기 →</a>
+        </div>
+      </div>
+    </div>
+  </article>
+</div>
+
+</main>
+<footer class="ef-footer">
+  <div class="ef-container">
+    <div class="ef-footer__top">
+      <div class="ef-footer__intro">
+        <a class="ef-wordmark" href="../index.html">아인폴랩<span class="ef-wordmark__dot" aria-hidden="true"></span></a>
+        <p>기업 · 공공기관 · 대학을 위한 AI 실무 교육과 도입 컨설팅</p>
+      </div>
+      <div>
+        <h3>사업 분야</h3>
+        <ul>
+          <li><a href="../index.html#services">AI 교육</a></li>
+          <li><a href="../index.html#services">AI 도입 컨설팅</a></li>
+          <li><a href="../index.html#services">AI 보안</a></li>
+        </ul>
+      </div>
+      <div>
+        <h3>회사</h3>
+        <ul>
+          <li><a href="../index.html#about">회사 소개</a></li>
+          <li><a href="../lab.html">AI연구소</a></li>
+          <li><a href="../records.html">고객 사례</a></li>
+          <li><a href="../blog/index.html">블로그 · 소식</a></li>
+        </ul>
+      </div>
+      <div>
+        <h3>문의</h3>
+        <ul>
+          <li><a href="mailto:iaman1016@gmail.com">iaman1016@gmail.com</a></li>
+          <li><a href="../index.html#contact">교육 문의하기</a></li>
+          <li><a href="#">회사소개서 받기</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="ef-footer__bottom">
+      <span>상호 아인폴랩</span>
+      <span>대표 조성문</span>
+      <span>사업자등록번호 151-53-01147</span>
+      <span>iaman1016@gmail.com</span>
+      <a href="#">개인정보처리방침</a>
+      <span>© 2026 아인폴랩</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+  (function () {
+    var btn = document.querySelector('.ef-menu-btn');
+    var nav = document.getElementById('mobile-nav');
+    if (!btn || !nav) return;
+    btn.addEventListener('click', function () {
+      var open = nav.classList.toggle('is-open');
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      btn.textContent = open ? '닫기' : '메뉴';
+    });
+    nav.addEventListener('click', function (e) {
+      if (e.target.tagName === 'A') {
+        nav.classList.remove('is-open');
+        btn.setAttribute('aria-expanded', 'false');
+        btn.textContent = '메뉴';
+      }
+    });
+  })();
+</script>
+</body>
+</html>

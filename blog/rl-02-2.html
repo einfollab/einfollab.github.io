@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[강화학습 기초 2-2] 마르코프 연쇄: 지금만 보고 다음을 예측한다 | 아인폴랩</title>
+<meta name="description" content="마르코프 속성과 마르코프 연쇄를 날씨 예측과 길 찾기 예시로 계산해 봅니다.">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="../assets/css/site.css">
+</head>
+<body>
+<a class="ef-skip" href="#main">본문으로 건너뛰기</a>
+<header class="ef-header">
+  <div class="ef-container ef-header__inner">
+    <a class="ef-wordmark" href="../index.html" aria-label="아인폴랩 홈">아인폴랩<span class="ef-wordmark__dot" aria-hidden="true"></span></a>
+    <nav class="ef-nav" aria-label="주 메뉴">
+      <a href="../index.html#about">회사 소개</a>
+      <a href="../index.html#services">사업 분야</a>
+      <a href="../courses.html">교육 과정</a>
+      <a href="../records.html">고객 사례</a>
+      <a href="../lab.html">AI연구소</a>
+      <a href="../blog/index.html" aria-current="page">블로그</a>
+    </nav>
+    <a class="ef-btn ef-btn--primary ef-btn--sm ef-header__cta" href="../index.html#contact">교육 문의</a>
+    <button class="ef-menu-btn" type="button" aria-expanded="false" aria-controls="mobile-nav">메뉴</button>
+  </div>
+  <nav class="ef-mobile-nav" id="mobile-nav" aria-label="모바일 메뉴">
+    <a href="../index.html#about">회사 소개</a>
+    <a href="../index.html#services">사업 분야</a>
+    <a href="../courses.html">교육 과정</a>
+    <a href="../records.html">고객 사례</a>
+    <a href="../lab.html">AI연구소</a>
+    <a href="../blog/index.html" aria-current="page">블로그</a>
+    <a class="ef-btn ef-btn--primary" href="../index.html#contact">교육 문의하기</a>
+  </nav>
+</header>
+
+<main id="main">
+<div class="ef-container">
+  <article class="ef-article">
+    <a class="ef-article__back" href="../blog/index.html">← 블로그 목록</a>
+    <header class="ef-article__head">
+      <div class="ef-tags"><span class="ef-tag" data-track="dev">강화학습</span><span class="ef-tag">연재</span>
+        <span class="ef-tag">2026.09.30</span>
+      </div>
+      <h1>[강화학습 기초 2-2] 마르코프 연쇄: 지금만 보고 다음을 예측한다</h1><p class="ef-lead">마르코프 속성과 마르코프 연쇄를 날씨 예측과 길 찾기 예시로 계산해 봅니다.</p>
+    </header>
+    <div class="ef-prose">
+<div class="ef-series">
+  <p class="ef-series__name">강화학습 기초 시리즈 · 12편 중 3번째 글</p>
+  <details><summary>연재 목차 보기</summary><ol><li><a href="rl-01.html">1. 왜 지금 강화학습인가</a></li><li><a href="rl-02-1.html">2-1. 강화학습이란, 그리고 꼭 알아야 할 확률</a></li><li aria-current="page">2-2. 마르코프 연쇄: 지금만 보고 다음을 예측한다</li><li><a href="rl-02-3.html">2-3. 마르코프 보상 과정: 상태의 가치를 계산한다</a></li><li><a href="rl-03-1.html">3-1. 마르코프 결정 과정: 행동과 정책이 더해진다</a></li><li><a href="rl-03-2.html">3-2. 다이내믹 프로그래밍, 몬테카를로, TD</a></li><li><a href="rl-03-3.html">3-3. 살사와 Q러닝</a></li><li><a href="rl-04-1.html">4-1. 선형 회귀에서 심층 신경망까지</a></li><li><a href="rl-04-2.html">4-2. 텐서플로로 첫 신경망 만들기</a></li><li><a href="rl-05.html">5. 함수 근사: 표 대신 신경망으로 가치를 표현한다</a></li><li><a href="rl-06-1.html">6-1. DQN을 움직이는 세 가지 장치</a></li><li><a href="rl-06-2.html">6-2. 카트폴 DQN 코드 한 줄씩 읽기</a></li></ol></details>
+  <p class="ef-series__src">대표가 쓴 『개발자답게 코드로 익히는 강화학습』(프리렉, 2025)의 내용을 블로그에 맞게 정리해 연재합니다.</p>
+</div>
+
+<h2>마르코프 속성</h2>
+<p><b>마르코프 속성(Markov Property)</b>은 러시아 수학자 안드레이 마르코프의 이름을 딴 개념으로, 확률과정의 특별한 형태입니다. 핵심은 <b>과거를 기억하지 않는다</b>는 것입니다. 과거에 일어난 일은 무시하고 <b>현재 상태만 보고 미래를 예측</b>합니다.</p>
+<p>왜 과거를 무시할까요? 문제를 단순하게 만들기 위해서입니다. 과거의 모든 상황까지 고려하면 따져야 할 데이터가 감당할 수 없을 만큼 많아집니다. 미래에 가장 큰 영향을 주는 현재만 보면 문제가 훨씬 쉬워집니다.</p>
+<p>마르코프 속성을 조건부 확률로 쓰면 다음과 같습니다.</p>
+<figure><img src="../assets/img/blog/rl/ch2-markov-formula.png" alt="조건부 확률로 표현한 마르코프 속성" loading="lazy"><figcaption>조건부 확률로 표현한 마르코프 속성</figcaption></figure>
+<p>시간 t의 상태가 S<sub>t</sub>일 때, 다음 시간 t+1의 상태 S<sub>t+1</sub>은 그 이전 상태들(S<sub>1</sub> … S<sub>t-1</sub>)과 상관없이 <b>S<sub>t</sub>만으로 정해진다</b>는 뜻입니다.</p>
+<figure><img src="../assets/img/blog/rl/ch2-markov-property.png" alt="마르코프 속성" loading="lazy"><figcaption>마르코프 속성</figcaption></figure>
+<p>자루에 빨간 공 2개, 파란 공 1개, 노란 공 1개가 들어 있다고 해 봅시다.</p>
+<ul>
+<li><b>마르코프 속성을 만족하지 않는 경우</b>: 오늘 꺼낸 공과 내일 꺼낸 공을 모두 따로 보관하면, 셋째 날 나올 공은 오늘과 내일 꺼낸 공 모두의 영향을 받습니다.</li>
+<li><b>마르코프 속성을 만족하는 경우</b>: 내일 공을 꺼낸 뒤 오늘 꺼낸 공을 자루에 다시 넣으면, 셋째 날 나올 공은 바로 전날 꺼낸 공의 영향만 받습니다.</li>
+</ul>
+
+<h2>마르코프 연쇄</h2>
+<p><b>마르코프 연쇄(Markov Chain)</b>는 마르코프 속성을 가진 시스템이 시간에 따라 상태를 바꿔 가는 모습을 나타냅니다. 미래 상태의 확률이 과거와 상관없이 현재 상태로만 정해지는 환경입니다. 상태가 이산적(discrete)이면 마르코프 연쇄, 연속적(continuous)이면 마르코프 프로세스(Markov Process)라고 부릅니다.</p>
+<div class="ef-aside">
+<p class="ef-aside__title">여기서 잠깐 · 이산적과 연속적</p>
+<p>이산적이라는 말은 따로따로 떨어져 있다는 뜻이고, 연속적이라는 말은 끊김 없이 이어져 있다는 뜻입니다. 1, 2, 3 같은 정수는 서로 떨어져 있으니 이산적이고, 1.0000001과 1.0000002 사이에도 끝없이 숫자가 있는 실수는 연속적입니다.</p>
+</div>
+<p>마르코프 연쇄는 두 가지로 이루어집니다. <b>상태 집합(S)</b>과 <b>상태 전이 행렬(P)</b>입니다. 상태 전이 행렬은 한 상태에서 다른 상태로 바뀔 확률을 행렬(매트릭스) 형태로 모아 놓은 것입니다.</p>
+<figure><img src="../assets/img/blog/rl/ch2-chain-parts.png" alt="마르코프 연쇄의 구성 요소" loading="lazy"><figcaption>마르코프 연쇄의 구성 요소</figcaption></figure>
+
+<h3>예시: 날씨 예측</h3>
+<p>이해를 돕기 위해 상황을 단순하게 만들어 보겠습니다. 날씨는 맑음과 비 두 가지뿐이고, 과거 데이터를 분석해서 오늘 날씨에 따른 내일 날씨의 확률을 구해 두었다고 합시다.</p>
+<figure><img src="../assets/img/blog/rl/ch2-weather-matrix.png" alt="상태 전이 행렬" loading="lazy"><figcaption>상태 전이 행렬</figcaption></figure>
+<ul>
+<li>오늘 맑음 → 내일 맑음: 0.6</li>
+<li>오늘 맑음 → 내일 비: 0.4</li>
+<li>오늘 비 → 내일 맑음: 0.7</li>
+<li>오늘 비 → 내일 비: 0.3</li>
+</ul>
+<p>이 네 가지 확률을 행렬로 묶은 것이 상태 전이 행렬입니다. 각 행의 합은 항상 1입니다. 오늘 날씨가 정해지면 내일은 둘 중 하나가 반드시 나오기 때문입니다.</p>
+<p>그럼 오늘 맑을 때 <b>3일 뒤 날씨</b>는 어떨까요? 마르코프 연쇄에서는 과거를 볼 필요가 없으니, 상태 전이 행렬을 세 번 곱하면 됩니다.</p>
+<table class="ef-calc ef-calc--plain">
+<thead><tr><th>계산</th><th>맑음 → 맑음</th><th>맑음 → 비</th><th>비 → 맑음</th><th>비 → 비</th></tr></thead>
+<tbody>
+<tr><td>1일 뒤 (P)</td><td>0.6</td><td>0.4</td><td>0.7</td><td>0.3</td></tr>
+<tr><td>2일 뒤 (P × P)</td><td>0.64</td><td>0.36</td><td>0.63</td><td>0.37</td></tr>
+<tr><td>3일 뒤 (P × P × P)</td><td>0.636</td><td>0.364</td><td>0.637</td><td>0.363</td></tr>
+</tbody>
+</table>
+<p>예를 들어 2일 뒤 "맑음 → 맑음"은 (맑음→맑음→맑음) 0.6×0.6 + (맑음→비→맑음) 0.4×0.7 = 0.36 + 0.28 = <b>0.64</b>입니다. 같은 방식으로 한 번 더 곱하면, 오늘 맑을 때 3일 뒤에도 맑을 확률은 <b>0.636</b>, 비가 올 확률은 <b>0.364</b>입니다. 단순한 행렬 곱셈으로 미래를 그럴듯하게 예측할 수 있습니다.</p>
+<p>흥미로운 점은 3일 뒤가 되면 오늘 맑았든(0.636) 비가 왔든(0.637) 맑을 확률이 거의 같아진다는 것입니다. 시간이 지날수록 오늘 날씨의 영향이 옅어지기 때문입니다.</p>
+
+<h3>예시: 길 찾기 네트워크</h3>
+<p>이번에는 네트워크 형태로 표현된 환경을 보겠습니다. 출발점(S)에서 라우터(R1, R2, R3)를 거쳐 도착점(F)까지 가는 구성입니다. 화살표는 갈 수 있는 방향이고, 각 화살표에는 확률이 붙어 있습니다.</p>
+<figure><img src="../assets/img/blog/rl/ch2-chain-network.png" alt="네트워크로 표현한 마르코프 연쇄" loading="lazy"><figcaption>네트워크로 표현한 마르코프 연쇄</figcaption></figure>
+<p>S에서는 R1(0.4)이나 R2(0.6)로 갈 수 있고, 두 확률을 더하면 1입니다. 같은 내용을 행렬로도 쓸 수 있습니다.</p>
+<table class="ef-calc ef-calc--plain">
+<thead><tr><th>현재 \ 다음</th><th>S</th><th>R1</th><th>R2</th><th>R3</th><th>F</th></tr></thead>
+<tbody>
+<tr><th>S</th><td>0</td><td>0.4</td><td>0.6</td><td>0</td><td>0</td></tr>
+<tr><th>R1</th><td>0</td><td>0</td><td>0.3</td><td>0.4</td><td>0.3</td></tr>
+<tr><th>R2</th><td>0</td><td>0</td><td>0</td><td>0.4</td><td>0.6</td></tr>
+<tr><th>R3</th><td>0</td><td>0</td><td>0</td><td>0</td><td>1</td></tr>
+<tr><th>F</th><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+</tbody>
+</table>
+<p>네트워크로 쓸지 행렬로 쓸지는 풀고 싶은 문제에 따라 고르면 됩니다.</p>
+<p>한 번에 화살표 하나씩 움직인다고 할 때, <b>정확히 3번 움직여서</b> S에서 F에 도착할 확률을 구해 봅시다. 한 번 움직이는 단위를 <b>타임스텝(Time Step)</b>이라고 부릅니다.</p>
+<p>3 타임스텝 만에 도착하는 길은 세 가지입니다. 이처럼 상태가 이어지는 하나의 흐름을 <b>에피소드(Episode)</b>라고 합니다. 각 길은 조건부 확률이 연달아 일어나야 하므로 확률을 곱하고, 마지막에 세 길의 확률을 더합니다.</p>
+<table class="ef-calc">
+<thead><tr><th>에피소드</th><th>계산</th><th>확률</th></tr></thead>
+<tbody>
+<tr><td>S → R1 → R3 → F</td><td>0.4 × 0.4 × 1</td><td>0.160</td></tr>
+<tr><td>S → R1 → R2 → F</td><td>0.4 × 0.3 × 0.6</td><td>0.072</td></tr>
+<tr><td>S → R2 → R3 → F</td><td>0.6 × 0.4 × 1</td><td>0.240</td></tr>
+<tr><th colspan="2">3 타임스텝에 도착할 확률 (합계)</th><td>0.472</td></tr>
+</tbody>
+</table>
+<figure><img src="../assets/img/blog/rl/ch2-env-episode.png" alt="환경과 에피소드" loading="lazy"><figcaption>환경과 에피소드</figcaption></figure>
+<p>왼쪽 그림처럼 갈 수 있는 길 전체가 <b>환경</b>이고, 오른쪽처럼 실제로 지나간 길 하나가 <b>에피소드</b>입니다. 마르코프 연쇄를 쓰는 목적은 이렇게 <b>풀고 싶은 일이 일어날 확률을 구하는 것</b>입니다.</p>
+
+<h3>어디에 쓰일까</h3>
+<p>마르코프 연쇄는 실제로 많이 쓰입니다. 야구 통계에서는 아웃카운트와 주자 위치를 상태로 보고, 상태가 바뀌는 확률로 앞으로 낼 수 있는 점수를 계산합니다. 영화 「머니볼」로 널리 알려진 데이터 야구도 이런 통계 분석을 바탕으로 합니다. 경기에 내보낼 선수를 고르거나, 3년 뒤 매출을 예측해 판매 전략을 세우는 일에도 같은 생각을 쓸 수 있습니다.</p>
+
+<h2>정리</h2>
+<ul>
+<li>마르코프 속성: 다음 상태는 현재 상태만으로 정해집니다.</li>
+<li>마르코프 연쇄 = 상태 집합(S) + 상태 전이 행렬(P)</li>
+<li>행렬을 여러 번 곱하면 몇 단계 뒤의 확률을, 경로별 확률을 곱하고 더하면 에피소드의 확률을 구할 수 있습니다.</li>
+</ul>
+<p>다음 편에서는 여기에 <b>보상</b>을 더해, 상태가 얼마나 가치 있는지 계산하는 <b>마르코프 보상 과정</b>을 살펴봅니다.</p>
+
+<nav class="ef-series-nav" aria-label="연재 이동"><a href="rl-02-1.html">← 2-1. 강화학습이란, 그리고 꼭 알아야 할 확률</a><a class="is-next" href="rl-02-3.html">2-3. 마르코프 보상 과정: 상태의 가치를 계산한다 →</a></nav>
+    </div>
+    <div class="ef-article__foot">
+      <div class="ef-cta ef-inverse">
+        <h2 class="ef-h2">교육과 컨설팅을 문의해 주세요</h2>
+        <p>교육 대상과 일정을 알려 주시면 과정 제안과 강의계획서를 보내 드립니다.</p>
+        <div class="ef-cta__actions">
+          <a class="ef-btn ef-btn--primary ef-btn--lg" href="mailto:iaman1016@gmail.com?subject=%EA%B5%90%EC%9C%A1%20%EB%AC%B8%EC%9D%98">교육 문의하기</a>
+          <a class="ef-btn ef-btn--secondary ef-btn--lg" href="../blog/index.html">다른 글 보기 →</a>
+        </div>
+      </div>
+    </div>
+  </article>
+</div>
+
+</main>
+<footer class="ef-footer">
+  <div class="ef-container">
+    <div class="ef-footer__top">
+      <div class="ef-footer__intro">
+        <a class="ef-wordmark" href="../index.html">아인폴랩<span class="ef-wordmark__dot" aria-hidden="true"></span></a>
+        <p>기업 · 공공기관 · 대학을 위한 AI 실무 교육과 도입 컨설팅</p>
+      </div>
+      <div>
+        <h3>사업 분야</h3>
+        <ul>
+          <li><a href="../index.html#services">AI 교육</a></li>
+          <li><a href="../index.html#services">AI 도입 컨설팅</a></li>
+          <li><a href="../index.html#services">AI 보안</a></li>
+        </ul>
+      </div>
+      <div>
+        <h3>회사</h3>
+        <ul>
+          <li><a href="../index.html#about">회사 소개</a></li>
+          <li><a href="../lab.html">AI연구소</a></li>
+          <li><a href="../records.html">고객 사례</a></li>
+          <li><a href="../blog/index.html">블로그 · 소식</a></li>
+        </ul>
+      </div>
+      <div>
+        <h3>문의</h3>
+        <ul>
+          <li><a href="mailto:iaman1016@gmail.com">iaman1016@gmail.com</a></li>
+          <li><a href="../index.html#contact">교육 문의하기</a></li>
+          <li><a href="#">회사소개서 받기</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="ef-footer__bottom">
+      <span>상호 아인폴랩</span>
+      <span>대표 조성문</span>
+      <span>사업자등록번호 151-53-01147</span>
+      <span>iaman1016@gmail.com</span>
+      <a href="#">개인정보처리방침</a>
+      <span>© 2026 아인폴랩</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+  (function () {
+    var btn = document.querySelector('.ef-menu-btn');
+    var nav = document.getElementById('mobile-nav');
+    if (!btn || !nav) return;
+    btn.addEventListener('click', function () {
+      var open = nav.classList.toggle('is-open');
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      btn.textContent = open ? '닫기' : '메뉴';
+    });
+    nav.addEventListener('click', function (e) {
+      if (e.target.tagName === 'A') {
+        nav.classList.remove('is-open');
+        btn.setAttribute('aria-expanded', 'false');
+        btn.textContent = '메뉴';
+      }
+    });
+  })();
+</script>
+</body>
+</html>

@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[강화학습 기초 6-2] 카트폴 DQN 코드 한 줄씩 읽기 | 아인폴랩</title>
+<meta name="description" content="카트폴 DQN 전체 코드를 함수별로 읽고, 최신 패키지에 맞춰 고친 부분과 실행 결과를 확인합니다.">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="../assets/css/site.css">
+</head>
+<body>
+<a class="ef-skip" href="#main">본문으로 건너뛰기</a>
+<header class="ef-header">
+  <div class="ef-container ef-header__inner">
+    <a class="ef-wordmark" href="../index.html" aria-label="아인폴랩 홈">아인폴랩<span class="ef-wordmark__dot" aria-hidden="true"></span></a>
+    <nav class="ef-nav" aria-label="주 메뉴">
+      <a href="../index.html#about">회사 소개</a>
+      <a href="../index.html#services">사업 분야</a>
+      <a href="../courses.html">교육 과정</a>
+      <a href="../records.html">고객 사례</a>
+      <a href="../lab.html">AI연구소</a>
+      <a href="../blog/index.html" aria-current="page">블로그</a>
+    </nav>
+    <a class="ef-btn ef-btn--primary ef-btn--sm ef-header__cta" href="../index.html#contact">교육 문의</a>
+    <button class="ef-menu-btn" type="button" aria-expanded="false" aria-controls="mobile-nav">메뉴</button>
+  </div>
+  <nav class="ef-mobile-nav" id="mobile-nav" aria-label="모바일 메뉴">
+    <a href="../index.html#about">회사 소개</a>
+    <a href="../index.html#services">사업 분야</a>
+    <a href="../courses.html">교육 과정</a>
+    <a href="../records.html">고객 사례</a>
+    <a href="../lab.html">AI연구소</a>
+    <a href="../blog/index.html" aria-current="page">블로그</a>
+    <a class="ef-btn ef-btn--primary" href="../index.html#contact">교육 문의하기</a>
+  </nav>
+</header>
+
+<main id="main">
+<div class="ef-container">
+  <article class="ef-article">
+    <a class="ef-article__back" href="../blog/index.html">← 블로그 목록</a>
+    <header class="ef-article__head">
+      <div class="ef-tags"><span class="ef-tag" data-track="dev">강화학습</span><span class="ef-tag">연재</span>
+        <span class="ef-tag">2026.09.30</span>
+      </div>
+      <h1>[강화학습 기초 6-2] 카트폴 DQN 코드 한 줄씩 읽기</h1><p class="ef-lead">카트폴 DQN 전체 코드를 함수별로 읽고, 최신 패키지에 맞춰 고친 부분과 실행 결과를 확인합니다.</p>
+    </header>
+    <div class="ef-prose">
+<div class="ef-series">
+  <p class="ef-series__name">강화학습 기초 시리즈 · 12편 중 12번째 글</p>
+  <details><summary>연재 목차 보기</summary><ol><li><a href="rl-01.html">1. 왜 지금 강화학습인가</a></li><li><a href="rl-02-1.html">2-1. 강화학습이란, 그리고 꼭 알아야 할 확률</a></li><li><a href="rl-02-2.html">2-2. 마르코프 연쇄: 지금만 보고 다음을 예측한다</a></li><li><a href="rl-02-3.html">2-3. 마르코프 보상 과정: 상태의 가치를 계산한다</a></li><li><a href="rl-03-1.html">3-1. 마르코프 결정 과정: 행동과 정책이 더해진다</a></li><li><a href="rl-03-2.html">3-2. 다이내믹 프로그래밍, 몬테카를로, TD</a></li><li><a href="rl-03-3.html">3-3. 살사와 Q러닝</a></li><li><a href="rl-04-1.html">4-1. 선형 회귀에서 심층 신경망까지</a></li><li><a href="rl-04-2.html">4-2. 텐서플로로 첫 신경망 만들기</a></li><li><a href="rl-05.html">5. 함수 근사: 표 대신 신경망으로 가치를 표현한다</a></li><li><a href="rl-06-1.html">6-1. DQN을 움직이는 세 가지 장치</a></li><li aria-current="page">6-2. 카트폴 DQN 코드 한 줄씩 읽기</li></ol></details>
+  <p class="ef-series__src">대표가 쓴 『개발자답게 코드로 익히는 강화학습』(프리렉, 2025)의 내용을 블로그에 맞게 정리해 연재합니다.</p>
+</div>
+
+<p>지난 편에서 본 세 장치를 코드로 옮깁니다. 책의 코드 구조(Agent 클래스와 함수 이름)는 살리고, 최신 패키지(Gymnasium, 텐서플로 2.21)에서 그대로 돌아가도록 다듬었습니다.</p>
+
+<h2>전체 코드</h2>
+<pre><code class="language-python">import random
+from collections import deque
+
+import gymnasium as gym
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras import layers
+
+
+class Agent:
+    def __init__(self, episode_num=500):
+        # 환경
+        self.env = gym.make(&quot;CartPole-v1&quot;)
+        self.state_size = self.env.observation_space.shape[0]    # 4
+        self.action_size = int(self.env.action_space.n)         # 2
+
+        # 모델
+        self.node_num = 24
+        self.learning_rate = 0.001
+        self.model = self.build_model()
+
+        # 학습
+        self.discount_rate = 0.97
+        self.penalty = -100
+        self.episode_num = episode_num
+
+        # 리플레이 메모리
+        self.replay_memory = deque(maxlen=2048)
+        self.replay_size = 32
+
+        # 탐험 (입실론)
+        self.epsilon = 0.99
+        self.epsilon_decay = 0.2     # 전체 에피소드의 20% 지점에서 최솟값까지 줄어듦
+        self.epsilon_min = 0.05
+
+        # 모니터링
+        self.moving_avg_size = 20
+        self.count_list = []
+        self.moving_avg_list = []
+
+    def build_model(self):
+        model = tf.keras.Sequential([
+            layers.Input(shape=(self.state_size,)),
+            layers.Dense(self.node_num, activation=&quot;relu&quot;),
+            layers.Dense(self.node_num, activation=&quot;relu&quot;),
+            layers.Dense(self.action_size, activation=&quot;linear&quot;),
+        ])
+        model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=self.learning_rate),
+                      loss=&quot;mse&quot;)
+        return model
+
+    def train(self):
+        for episode in range(self.episode_num):
+            state, _ = self.env.reset()
+            count = self.take_action_and_append_memory(episode, state)
+            self.count_list.append(count)
+            self.moving_avg_list.append(np.mean(self.count_list[-self.moving_avg_size:]))
+            if episode % 10 == 0:
+                print(f&quot;episode:{episode}, count:{count}, moving_avg:{self.moving_avg_list[-1]:.1f}&quot;)
+        self.model.save(&quot;dqn_cartpole.keras&quot;)
+
+    def take_action_and_append_memory(self, episode, state):
+        epsilon = self.get_epsilon(episode)
+        count = 0
+        done = False
+        while not done:
+            count += 1
+            action = self.greed_search(epsilon, state)
+            state_next, reward, terminated, truncated, _ = self.env.step(action)
+            done = terminated or truncated
+            if terminated:                      # 막대가 쓰러졌을 때만 벌점
+                reward = self.penalty
+            self.replay_memory.append((state, action, reward, state_next, terminated))
+            self.train_mini_batch()             # 한 스텝마다 미니배치 학습
+            state = state_next
+        return count
+
+    def train_mini_batch(self):
+        if len(self.replay_memory) &lt; self.replay_size:
+            return
+        batch = random.sample(self.replay_memory, self.replay_size)
+        states = np.array([b[0] for b in batch])
+        actions = np.array([b[1] for b in batch])
+        rewards = np.array([b[2] for b in batch], dtype=np.float32)
+        next_states = np.array([b[3] for b in batch])
+        terminated = np.array([b[4] for b in batch], dtype=np.float32)
+
+        q = self.model(states, training=False).numpy()          # 현재 상태의 Q값 (목표의 바탕)
+        q_next = self.model(next_states, training=False).numpy()
+        target = rewards + self.discount_rate * np.max(q_next, axis=1) * (1 - terminated)
+        q[np.arange(self.replay_size), actions] = target         # 실제로 한 행동의 Q값만 바꿈
+        self.model.train_on_batch(states, q)
+
+    def get_epsilon(self, episode):
+        result = self.epsilon * (1 - episode / (self.episode_num * self.epsilon_decay))
+        return max(result, self.epsilon_min)
+
+    def greed_search(self, epsilon, state):
+        if np.random.rand() &lt; epsilon:
+            return self.env.action_space.sample()
+        q = self.model(state[np.newaxis, :], training=False).numpy()
+        return int(np.argmax(q[0]))
+
+
+if __name__ == &quot;__main__&quot;:
+    agent = Agent()
+    agent.train()</code></pre>
+
+<h2>클래스 구성</h2>
+<table>
+<thead><tr><th>함수</th><th>하는 일</th></tr></thead>
+<tbody>
+<tr><td>build_model</td><td>상태 → 행동별 Q값 신경망을 만든다</td></tr>
+<tr><td>train</td><td>에피소드를 반복하며 전체 학습을 이끈다</td></tr>
+<tr><td>take_action_and_append_memory</td><td>한 에피소드 동안 행동하고, 경험을 메모리에 쌓고, 스텝마다 학습한다</td></tr>
+<tr><td>train_mini_batch</td><td>메모리에서 무작위로 꺼낸 경험으로 신경망을 학습한다</td></tr>
+<tr><td>get_epsilon</td><td>에피소드가 진행될수록 줄어드는 ε을 계산한다</td></tr>
+<tr><td>greed_search</td><td>ε에 따라 무작위 행동 또는 Q값이 가장 큰 행동을 고른다</td></tr>
+</tbody>
+</table>
+
+<h2>설정값</h2>
+<table>
+<thead><tr><th>변수</th><th>값</th><th>뜻</th></tr></thead>
+<tbody>
+<tr><td>discount_rate</td><td>0.97</td><td>감가율 γ. 미래 보상을 얼마나 깎을지</td></tr>
+<tr><td>penalty</td><td>−100</td><td>막대가 쓰러졌을 때 주는 벌점. 카트폴은 기본으로 매 스텝 +1만 주므로, 실패를 분명히 알려 주려고 추가</td></tr>
+<tr><td>replay_memory</td><td>최대 2,048개</td><td>경험 저장소. 넘치면 오래된 것부터 삭제</td></tr>
+<tr><td>replay_size</td><td>32</td><td>한 번 학습할 때 꺼내는 경험 수(미니배치)</td></tr>
+<tr><td>epsilon / decay / min</td><td>0.99 / 0.2 / 0.05</td><td>전체 에피소드의 20% 지점까지 ε을 0.99에서 줄이고, 이후 0.05 유지</td></tr>
+</tbody>
+</table>
+
+<h2>핵심: train_mini_batch</h2>
+<p>DQN의 학습은 이 함수에 다 들어 있습니다.</p>
+<ol>
+<li>메모리에서 경험 32개를 무작위로 꺼냅니다.</li>
+<li>현재 상태들의 Q값을 신경망으로 예측합니다. 이것을 <b>목표의 바탕</b>으로 씁니다.</li>
+<li>다음 상태들의 Q값을 예측해 목표값 <b>r + γ max Q(다음 상태)</b>를 계산합니다. 막대가 쓰러진(terminated) 경우는 다음 상태가 없으므로 보상만 씁니다.</li>
+<li>실제로 했던 행동 칸만 목표값으로 바꾸고, 나머지 행동 칸은 예측값 그대로 둡니다. 그래야 한 행동의 Q값만 고쳐집니다.</li>
+<li>입력은 <b>현재 상태</b>, 정답은 바꾼 Q값으로 학습합니다.</li>
+</ol>
+
+<h2>책 코드에서 고친 부분</h2>
+<p>책의 원래 코드를 최신 환경에서 확인하면서 아래 부분을 고쳤습니다.</p>
+<table>
+<thead><tr><th>부분</th><th>원래 코드</th><th>고친 내용</th></tr></thead>
+<tbody>
+<tr><td>패키지</td><td>gym, env.step()이 값 4개 반환</td><td>gymnasium. reset()은 (상태, 정보), step()은 5개를 반환하고 종료가 terminated / truncated로 나뉨</td></tr>
+<tr><td>학습 입력</td><td>종료되지 않은 경험은 <b>다음 상태</b>가 입력으로 들어감</td><td><b>현재 상태</b>를 입력으로 사용</td></tr>
+<tr><td>목표의 바탕</td><td>에피소드 마지막 상태의 Q값 하나를 모든 경험에 같이 씀</td><td>경험마다 자기 상태의 Q값을 예측해서 사용</td></tr>
+<tr><td>학습 시점</td><td>에피소드가 끝날 때 한 번</td><td>스텝마다 미니배치 학습(원 논문 방식에 가까움)</td></tr>
+<tr><td>벌점</td><td>500스텝을 채워 끝난 경우도 실패로 처리</td><td>막대가 쓰러진 경우(terminated)에만 벌점</td></tr>
+<tr><td>기타</td><td>Adam(lr=...), 입력 모양 (1, 4), 저장 경로 "./model/dqn"</td><td>Adam(learning_rate=...), 입력 모양 (4,), "dqn_cartpole.keras"</td></tr>
+</tbody>
+</table>
+
+<h2>실행 결과 보기</h2>
+<p>train()은 10 에피소드마다 이번 에피소드에서 버틴 스텝 수(count)와 최근 20 에피소드의 이동평균을 출력합니다. 이동평균이 우상향하면 학습이 되고 있는 것입니다. 그래프로 보려면 다음 코드를 씁니다.</p>
+<pre><code class="language-python">import matplotlib.pyplot as plt
+
+plt.figure(figsize=(10, 4))
+plt.plot(agent.count_list, label=&quot;스텝 수&quot;)
+plt.plot(agent.moving_avg_list, label=&quot;이동평균(20)&quot;)
+plt.legend(loc=&quot;upper left&quot;)
+plt.title(&quot;CartPole DQN&quot;)
+plt.show()</code></pre>
+<figure><img src="../assets/img/blog/rl/ch6-result.png" alt="카트폴 DQN 학습 결과 그래프: 에피소드별 버틴 스텝 수와 20회 이동평균" loading="lazy"><figcaption>위 코드를 300 에피소드로 실행한 결과 (GPU 없이 CPU로 약 13분)</figcaption></figure>
+<p>처음 50 에피소드쯤은 ε이 커서 대부분 무작위로 움직이고, 10~20스텝 만에 막대가 쓰러집니다. 76번째 에피소드에서 처음으로 500스텝을 끝까지 버텼고, 300 에피소드 중 57번을 끝까지 버텼습니다. 다만 그래프처럼 잘하다가 갑자기 무너지는 구간이 반복됩니다. 학습 목표값을 계산하는 신경망과 학습 중인 신경망이 같아서 목표가 계속 흔들리기 때문입니다. 이 흔들림을 줄이는 장치가 앞에서 말한 <b>타깃 네트워크</b>입니다.</p>
+
+<p>같은 설정으로 다시 돌려도 결과가 매번 조금씩 다릅니다. 무작위 행동, 무작위 샘플링, 신경망 초깃값이 모두 난수를 쓰기 때문입니다. 주사위도 몇 번 던져서는 1/6이 나오지 않듯, 강화학습도 에피소드를 충분히 늘려야 성능이 안정됩니다. 어느 정도 효과가 있는 설정을 찾았다면 에피소드 수를 늘려 학습해 보세요.</p>
+<p>DQN은 초기 알고리즘이지만, 보상과 환경을 잘 설계하면 지금도 충분히 좋은 성능을 냅니다. 다음 연재에서는 정책을 직접 학습하는 <b>정책기반 강화학습</b>으로 넘어갑니다.</p>
+
+<nav class="ef-series-nav" aria-label="연재 이동"><a href="rl-06-1.html">← 6-1. DQN을 움직이는 세 가지 장치</a><span class="is-next">정책기반 강화학습 편으로 이어집니다.</span></nav>
+    </div>
+    <div class="ef-article__foot">
+      <div class="ef-cta ef-inverse">
+        <h2 class="ef-h2">교육과 컨설팅을 문의해 주세요</h2>
+        <p>교육 대상과 일정을 알려 주시면 과정 제안과 강의계획서를 보내 드립니다.</p>
+        <div class="ef-cta__actions">
+          <a class="ef-btn ef-btn--primary ef-btn--lg" href="mailto:iaman1016@gmail.com?subject=%EA%B5%90%EC%9C%A1%20%EB%AC%B8%EC%9D%98">교육 문의하기</a>
+          <a class="ef-btn ef-btn--secondary ef-btn--lg" href="../blog/index.html">다른 글 보기 →</a>
+        </div>
+      </div>
+    </div>
+  </article>
+</div>
+
+</main>
+<footer class="ef-footer">
+  <div class="ef-container">
+    <div class="ef-footer__top">
+      <div class="ef-footer__intro">
+        <a class="ef-wordmark" href="../index.html">아인폴랩<span class="ef-wordmark__dot" aria-hidden="true"></span></a>
+        <p>기업 · 공공기관 · 대학을 위한 AI 실무 교육과 도입 컨설팅</p>
+      </div>
+      <div>
+        <h3>사업 분야</h3>
+        <ul>
+          <li><a href="../index.html#services">AI 교육</a></li>
+          <li><a href="../index.html#services">AI 도입 컨설팅</a></li>
+          <li><a href="../index.html#services">AI 보안</a></li>
+        </ul>
+      </div>
+      <div>
+        <h3>회사</h3>
+        <ul>
+          <li><a href="../index.html#about">회사 소개</a></li>
+          <li><a href="../lab.html">AI연구소</a></li>
+          <li><a href="../records.html">고객 사례</a></li>
+          <li><a href="../blog/index.html">블로그 · 소식</a></li>
+        </ul>
+      </div>
+      <div>
+        <h3>문의</h3>
+        <ul>
+          <li><a href="mailto:iaman1016@gmail.com">iaman1016@gmail.com</a></li>
+          <li><a href="../index.html#contact">교육 문의하기</a></li>
+          <li><a href="#">회사소개서 받기</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="ef-footer__bottom">
+      <span>상호 아인폴랩</span>
+      <span>대표 조성문</span>
+      <span>사업자등록번호 151-53-01147</span>
+      <span>iaman1016@gmail.com</span>
+      <a href="#">개인정보처리방침</a>
+      <span>© 2026 아인폴랩</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+  (function () {
+    var btn = document.querySelector('.ef-menu-btn');
+    var nav = document.getElementById('mobile-nav');
+    if (!btn || !nav) return;
+    btn.addEventListener('click', function () {
+      var open = nav.classList.toggle('is-open');
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      btn.textContent = open ? '닫기' : '메뉴';
+    });
+    nav.addEventListener('click', function (e) {
+      if (e.target.tagName === 'A') {
+        nav.classList.remove('is-open');
+        btn.setAttribute('aria-expanded', 'false');
+        btn.textContent = '메뉴';
+      }
+    });
+  })();
+</script>
+</body>
+</html>
