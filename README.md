@@ -1,4 +1,4 @@
-# einfollab.github.io — 아인폴랩 홈페이지 (HTML 버전)
+# einfollab.com — 아인폴랩 홈페이지 (HTML 버전)
 
 PC에서 파일을 더블클릭해도, GitHub Pages에 올려도 같은 화면이 나오는 완성된 HTML입니다.
 
