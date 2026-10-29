@@ -458,3 +458,15 @@ img { max-width: 100%; display: block; }
 /* 결과물 화면: 위쪽 왼쪽 기준으로 잘라 제목과 핵심 화면이 보이게 */
 .ef-photo--screen { background: #fff; border-bottom: 1px solid var(--line, rgba(0,0,0,.08)); }
 .ef-photo--screen img { object-position: left top; }
+
+/* ===== 온라인 강의 카드 ===== */
+.ef-online__note { color: var(--ink-muted); margin: 0 0 var(--space-4); font-size: 15px; }
+.ef-online { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-4); }
+.ef-online__card { display: flex; flex-direction: column; overflow: hidden; padding: 0; color: inherit; text-decoration: none; transition: border-color .15s; }
+.ef-online__card:hover { border-color: var(--line-strong); }
+.ef-online__card img { width: 100%; aspect-ratio: 768 / 500; object-fit: cover; display: block; border-bottom: 1px solid var(--line); }
+.ef-online__body { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-4) var(--space-6) var(--space-6); flex: 1; }
+.ef-online__body strong { font-size: 16px; line-height: 24px; }
+.ef-online__go { margin-top: auto; color: var(--ink-muted); font-size: 14px; }
+@media (max-width: 900px) { .ef-online { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 560px) { .ef-online { grid-template-columns: 1fr; } }
